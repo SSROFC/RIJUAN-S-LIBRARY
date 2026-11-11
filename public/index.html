@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101b33">
+<title>Rijuan's Library</title>
+<style>
+:root{--navy:#101b33;--blue:#3158a5;--ink:#172033;--muted:#68748a;--bg:#f3f6fb;--line:#e5eaf2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:linear-gradient(135deg,#101b33,#263f70);color:white;padding:34px 18px 28px;text-align:center}
+.avatar{width:112px;height:112px;border-radius:50%;object-fit:cover;border:4px solid white;box-shadow:0 8px 28px #0004}
+h1{font-size:clamp(25px,5vw,36px);margin:13px 0 3px;letter-spacing:.04em}.owner{opacity:.85;font-size:14px}.tag{display:inline-block;margin-top:12px;border:1px solid #ffffff55;border-radius:30px;padding:6px 12px;font-size:12px}
+main{max-width:900px;margin:26px auto;padding:0 16px 50px}.panel{background:white;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 8px 30px #1720330a}
+.login{max-width:430px;margin:34px auto}.field{display:flex;gap:8px;margin-top:14px}input[type=password],input[type=search]{width:100%;border:1px solid #d6deeb;border-radius:11px;padding:13px 14px;font:inherit;min-width:0}
+button,.btn{border:0;border-radius:11px;padding:12px 17px;background:var(--blue);color:white;font-weight:650;font:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button.secondary{background:#edf1f8;color:#24324b}button.danger{background:#fff0f0;color:#b42318}button:disabled{opacity:.5;cursor:not-allowed}
+h2{font-size:20px;margin:0 0 8px}.muted{color:var(--muted);font-size:14px}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0}.toolbar input{flex:1;min-width:180px}
+.file{display:flex;align-items:center;gap:13px;padding:14px 0;border-top:1px solid var(--line)}.fileicon{width:42px;height:42px;border-radius:12px;background:#edf2ff;color:#3158a5;display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}.filename{font-weight:650;overflow-wrap:anywhere}.filemeta{font-size:12px;color:var(--muted);margin-top:3px}.fileinfo{flex:1;min-width:0}.actions{display:flex;gap:7px;flex-wrap:wrap}
+.uploadbox{border:1px dashed #aebbd0;border-radius:14px;padding:16px;margin:14px 0;background:#f9fbff}.uploadbox input{max-width:100%}.hidden{display:none!important}.message{margin-top:12px;font-size:14px;color:#b42318}.success{color:#137547}.toprow{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+@media(max-width:560px){.panel{padding:17px}.file{align-items:flex-start}.actions{flex-direction:column}.actions button{padding:9px 11px}.field{flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+  <img class="avatar" src="/owner.jpg" alt="Owner profile photo">
+  <h1>RIJUAN'S LIBRARY</h1>
+  <div class="owner">Owner: SAJJAT SABBIR RIJUAN</div>
+  <div class="tag">PRIVATE PDF &amp; PPT COLLECTION</div>
+</header>
+<main>
+  <section id="loginPanel" class="panel login">
+    <h2>🔐 Enter Access Code</h2>
+    <p class="muted">Use your private Admin Code or the Guest Code shared by the owner.</p>
+    <form id="loginForm">
+      <div class="field"><input id="code" type="password" placeholder="Enter access code" autocomplete="current-password" required><button type="submit">Enter</button></div>
+    </form>
+    <div id="loginMessage" class="message" role="status"></div>
+  </section>
+
+  <section id="libraryPanel" class="panel hidden">
+    <div class="toprow"><div><h2>📚 My Library</h2><div id="roleLabel" class="muted"></div></div><button id="logout" class="secondary">Log out</button></div>
+    <div id="adminTools" class="uploadbox hidden">
+      <strong>＋ Upload a new file</strong>
+      <p class="muted">Admin only · PDF, PPT or PPTX · Maximum 50 MB per file</p>
+      <form id="uploadForm"><input id="fileInput" type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" required> <button type="submit">Upload</button></form>
+      <div id="uploadMessage" class="muted" role="status"></div>
+    </div>
+    <div class="toolbar"><input id="search" type="search" placeholder="Search files..."><button id="refresh" class="secondary">Refresh</button></div>
+    <div id="fileList"><p class="muted">Loading files...</p></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let role=null, files=[];
+function message(id,text,success=false){$(id).textContent=text;$(id).className=success?"message success":"message"}
+async function api(url,opts={}){const r=await fetch(url,{credentials:"same-origin",...opts});if(!r.ok){let d={};try{d=await r.json()}catch{}throw new Error(d.error||"Something went wrong.");}return r.status===204?null:r.json()}
+function showLoggedIn(r){role=r;$("loginPanel").classList.add("hidden");$("libraryPanel").classList.remove("hidden");$("adminTools").classList.toggle("hidden",r!=="admin");$("roleLabel").textContent=r==="admin"?"👑 Admin access · Upload, download and delete":"👥 Guest access · Download only";loadFiles()}
+function fileRow(f){const ext=(f.name.split(".").pop()||"FILE").toUpperCase();const row=document.createElement("div");row.className="file";
+ const icon=document.createElement("div");icon.className="fileicon";icon.textContent=ext.slice(0,4);
+ const info=document.createElement("div");info.className="fileinfo";const name=document.createElement("div");name.className="filename";name.textContent=f.name;const meta=document.createElement("div");meta.className="filemeta";meta.textContent=(f.size/1024/1024).toFixed(2)+" MB · "+new Date(f.uploaded).toLocaleDateString();info.append(name,meta);
+ const actions=document.createElement("div");actions.className="actions";const dl=document.createElement("a");dl.className="btn";dl.href="/api/download/"+encodeURIComponent(f.id);dl.textContent="↓ Download";actions.append(dl);
+ if(role==="admin"){const del=document.createElement("button");del.className="danger";del.textContent="Delete";del.onclick=async()=>{if(!confirm("Delete "+f.name+"?"))return;try{await api("/api/files/"+encodeURIComponent(f.id),{method:"DELETE"});loadFiles()}catch(e){alert(e.message)}};actions.append(del)}
+ row.append(icon,info,actions);return row}
+async function loadFiles(){const box=$("fileList");box.replaceChildren();try{files=await api("/api/files");const q=$("search").value.trim().toLowerCase();const shown=files.filter(f=>f.name.toLowerCase().includes(q));if(!shown.length){const p=document.createElement("p");p.className="muted";p.textContent=files.length?"No matching files.":"No files uploaded yet.";box.append(p);return}shown.forEach(f=>box.append(fileRow(f)))}catch(e){box.textContent=e.message}}
+$("loginForm").onsubmit=async e=>{e.preventDefault();message("loginMessage","Checking code...");try{const d=await api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:$("code").value})});$("code").value="";showLoggedIn(d.role)}catch(e){message("loginMessage",e.message)}};
+$("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"});role=null;$("libraryPanel").classList.add("hidden");$("loginPanel").classList.remove("hidden")}catch(e){alert(e.message)}};
+$("uploadForm").onsubmit=async e=>{e.preventDefault();const f=$("fileInput").files[0];if(!f)return;const data=new FormData();data.append("file",f);$("uploadMessage").textContent="Uploading...";try{await api("/api/upload",{method:"POST",body:data});$("fileInput").value="";$("uploadMessage").textContent="Upload complete.";loadFiles()}catch(e){$("uploadMessage").textContent=e.message}};
+$("search").oninput=loadFiles;$("refresh").onclick=loadFiles;
+(async()=>{try{const d=await api("/api/me");if(d.role)showLoggedIn(d.role)}catch{}})();
+</script>
+</body></html>
